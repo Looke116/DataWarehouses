@@ -1,13 +1,14 @@
 package org.example.backend;
 
-import org.example.backend.Entities.Source;
-import org.example.backend.Repositories.SourceRepository;
+import org.example.backend.Entities.Provider;
+import org.example.backend.Repositories.ProviderRepository;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -22,59 +23,16 @@ public class BackendApplication {
     public static void main(String[] args) {
         SpringApplication.run(BackendApplication.class, args);
     }
-//    public static void main(String[] args) throws IOException {
-//        Random rand = new Random();
-//        FileWriter fw = new FileWriter("tickets.sql");
-//        for (int i = 0; i < 5000; i++) {
-//            StringBuilder builder = new StringBuilder();
-//            builder.append("INSERT INTO INCIDENT_TICKETS (Ticket_Number, Status, Priority, Company, Project, Team, Assigned_Person, Description) VALUES (");
-//            builder.append(i).append(", ");
-//
-//            int status = rand.nextInt(5);
-//            switch (status) {
-//                case 0 -> builder.append("'Open'");
-//                case 1 -> builder.append("'In Progress'");
-//                case 2 -> builder.append("'Resolved'");
-//                case 3 -> builder.append("'Closed'");
-//                case 4 -> builder.append("'Waiting for Customer'");
-//            }
-//            builder.append(", ");
-//
-//            int priority = rand.nextInt(4);
-//            switch (priority) {
-//                case 0 -> builder.append("'Low'");
-//                case 1 -> builder.append("'Medium'");
-//                case 2 -> builder.append("'High'");
-//                case 3 -> builder.append("'Critical'");
-//            }
-//            builder.append(", ");
-//
-//            int company = rand.nextInt(4);
-//            switch (company) {
-//                case 0 -> builder.append("'IBM'");
-//                case 1 -> builder.append("'Google'");
-//                case 2 -> builder.append("'Amazon'");
-//                case 3 -> builder.append("'Microsoft'");
-//            }
-//            builder.append(", ");
-//
-//            builder.append("'Project").append(rand.nextInt(100)).append("', ");
-//            builder.append(rand.nextInt(3) + 1).append(", ");
-//            builder.append(rand.nextInt(6) + 1).append(", ");
-//            builder.append("'Unique Description ").append(i).append("')\n");
-//
-//            fw.write(builder.toString());
-//        }
-//        fw.close();
-//    }
 
 
 //    @Bean
-//    ApplicationRunner runner(SourceRepository repository) {
+//    ApplicationRunner runner(ProviderRepository repository) {
 //        return args -> {
-//            List<String> attributes = List.of("open", "high", "low", "close", "volume");
-//            Source source = new Source("AlphaVantage", "", Date.from(Instant.now()), attributes);
-//            repository.save(source);
+//            Provider AlphaVantage = new Provider("AlphaVantage", "", List.of("open", "high", "low", "close", "volume"));
+//            repository.save(AlphaVantage);
+//
+//            Provider TwelveData = new Provider("TwelveData", "", List.of("open", "high", "low", "close", "volume"));
+//            repository.save(TwelveData);
 //        };
 //    }
 

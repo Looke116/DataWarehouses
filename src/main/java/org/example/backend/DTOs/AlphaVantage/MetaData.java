@@ -14,10 +14,10 @@ public class MetaData {
 
     @JsonProperty("3. Last Refreshed")
     private String lastRefreshed;
+//
+//    @JsonProperty("4. Output Size")
+//    private String outputSize;
 
-    @JsonProperty("4. Output Size")
-    private String outputSize;
-
-    @JsonProperty("5. Time Zone")
+    @JsonProperty("4. Time Zone")
     private String timeZone;
 }

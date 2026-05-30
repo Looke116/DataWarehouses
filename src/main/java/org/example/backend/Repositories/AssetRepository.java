@@ -3,9 +3,12 @@ package org.example.backend.Repositories;
 import org.example.backend.Entities.Asset;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.util.Optional;
+
 public interface AssetRepository extends MongoRepository<Asset, String> {
 
-    boolean existsByName(String name);
+    boolean existsBySymbol(String symbol);
 
-    Asset findByName(String name);
+    Optional<Asset> findBySymbolAndDeleted(String symbol, boolean deleted);
+
 }

@@ -3,24 +3,27 @@ package org.example.backend.Entities;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.Map;
 
 @Data
 public class Asset {
     @Id
-    public String id;
-    public String name;
-    public String description;
-    public Date dateCreated;
-    public Map<String, String> attributes;
+    private String id;
+    private String symbol;
+    private String description;
+    private Map<String, String> attributes;
+    private LocalDate dateCreated;
+    private boolean deleted;
 
     public Asset() {}
 
-    public Asset(String name, String description, Date dateCreated, Map<String, String> attributes) {
-        this.name = name;
+    public Asset(String symbol, String description, Map<String, String> attributes) {
+        this.symbol = symbol;
         this.description = description;
-        this.dateCreated = dateCreated;
         this.attributes = attributes;
+
+        dateCreated = LocalDate.now();
+        deleted = false;
     }
 }

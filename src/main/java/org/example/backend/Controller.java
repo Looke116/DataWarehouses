@@ -1,128 +1,70 @@
 package org.example.backend;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.backend.DTOs.AlphaVantage.AlphaVantageResponseDTO;
-import org.example.backend.DTOs.AlphaVantage.DailyPrice;
+import org.example.backend.DTOs.TimeseriesDTO;
+import org.example.backend.DTOs.TwelveData.TwelveDataDTO;
 import org.example.backend.Entities.Asset;
-import org.example.backend.Entities.Source;
-import org.example.backend.Entities.Timeseries;
-import org.example.backend.Repositories.AssetRepository;
-import org.example.backend.Repositories.SourceRepository;
-import org.example.backend.Repositories.TimeseriesRepository;
+import org.example.backend.Entities.Provider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/")
 @CrossOrigin("*")
 public class Controller {
-    SourceRepository sourceRepository;
-    AssetRepository assetRepository;
-    TimeseriesRepository timeseriesRepository;
+    private final IngestService ingestService;
 
-
-    public Controller(
-            @Autowired AssetRepository assetRepository,
-            @Autowired SourceRepository srcRepository,
-            @Autowired TimeseriesRepository timeseriesRepository, SourceRepository sourceRepository) {
-        this.sourceRepository = sourceRepository;
-        this.assetRepository = assetRepository;
-        this.timeseriesRepository = timeseriesRepository;
+    @Autowired
+    public Controller(IngestService ingestService) {
+        this.ingestService = ingestService;
     }
 
-//    @GetMapping("/assets")
-//    public ResponseEntity<> getAssets() {
-//    }
-//
-//    @GetMapping("/assets/{id}")
-//    public ResponseEntity<Object> getAsset(@PathVariable("id") int id) {
-//    }
-//
-//    @GetMapping("/providers")
-//    public ResponseEntity<> getProviders() {
-//    }
-//
-//    @GetMapping("/timeseries?asset=BTC")
-//    public ResponseEntity<> getTimeseries(@RequestParam String asset) {
+    @GetMapping("/assets")
+    public ResponseEntity<List<Asset>> getAssets() {
+        return ResponseEntity.ok(ingestService.getAllAssets());
+    }
+
+    // TODO implement fuzzy search
+//    @GetMapping("/asset")
+//    public ResponseEntity<Asset> getAssets(@RequestParam String assetSymbol) {
+//        Optional<Asset> asset = ingestService.searchForAsset(assetSymbol);
+//        return asset.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
 //    }
 
-    @GetMapping("/ingest")
-    public ResponseEntity<AlphaVantageResponseDTO> ingest(@RequestParam String assetName, @RequestParam Sources provider) {
+    @GetMapping("/providers")
+    public ResponseEntity<List<Provider>> getProviders() {
+        return ResponseEntity.ok(ingestService.getAllProviders());
+    }
 
-        assetName = "IBM";
-        provider = Sources.AlphaVantage;
+    // TODO implement fuzzy search
+//    @GetMapping("/provider")
+//    public ResponseEntity<Provider> getProviders(@RequestParam String providerName) {
+//        Optional<Provider> provider = ingestService.searchForProvider(providerName);
+//        return provider.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+//    }
 
-        try (HttpClient client = HttpClient.newHttpClient()) {
-            String url = "https://www.alphavantage.co/query" +
-                    "?function=" + "TIME_SERIES_DAILY" +
-                    "&symbol=" + assetName +
-//                    "&apikey=" + "demo";
-                    "&apikey=" + new Scanner(new File("apikey")).nextLine();
+    @GetMapping("/timeseries")
+    public ResponseEntity<List<TimeseriesDTO>> getTimeseries(@RequestParam String assetId) {
+        List<TimeseriesDTO> dto = ingestService.getTimeseries(assetId);
+        if (dto == null) return ResponseEntity.notFound().build();
+        else return ResponseEntity.ok(dto);
+    }
 
+    @PostMapping("/ingest/AlphaVantage")
+    public ResponseEntity<AlphaVantageResponseDTO> ingestAlphaVantage(@RequestParam String assetName) {
+        AlphaVantageResponseDTO dto = ingestService.ingestAlphaVantage(assetName);
+        if (dto == null) return ResponseEntity.notFound().build();
+        else return ResponseEntity.ok(dto);
+    }
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(url))
-                    .timeout(Duration.ofSeconds(10))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            ObjectMapper mapper = new ObjectMapper();
-            AlphaVantageResponseDTO dto = mapper.readValue(response.body(), AlphaVantageResponseDTO.class);
-
-            Source source = sourceRepository.getSourceByName(provider.name());
-            Map<String, String> map = new HashMap<>();
-            map.put(source.name, String.valueOf(source.attributes));
-
-            Asset asset;
-            if (!assetRepository.existsByName(assetName)) {
-                asset = assetRepository.save(new Asset(assetName, "", Date.from(Instant.now()), map));
-            }else {
-                asset = assetRepository.findByName(assetName);
-            }
-
-            for (String dateString : dto.getTimeSeries().keySet()) {
-                LocalDate date = LocalDate.parse(dateString);
-
-                if (!timeseriesRepository.existsByAssetIdAndSourceIdAndBusinessDate(asset.id, source.id, date)) {
-                    Map<String, Integer> mapInteger = new HashMap<>();
-                    mapInteger.put("Volume", Integer.valueOf(dto.getTimeSeries().get(dateString).getVolume()));
-
-                    Map<String, Double> mapDouble = new HashMap<>();
-                    mapDouble.put("Open", Double.valueOf(dto.getTimeSeries().get(dateString).getOpen()));
-                    mapDouble.put("High", Double.valueOf(dto.getTimeSeries().get(dateString).getHigh()));
-                    mapDouble.put("Low", Double.valueOf(dto.getTimeSeries().get(dateString).getLow()));
-                    mapDouble.put("Close", Double.valueOf(dto.getTimeSeries().get(dateString).getClose()));
-
-                    timeseriesRepository.save(new Timeseries(asset.id, source.id, date, mapInteger, mapDouble));
-                }
-            }
-
-            return ResponseEntity.ok(dto);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+    @PostMapping("/ingest/TwelveData")
+    public ResponseEntity<TwelveDataDTO> ingestTwelveData(@RequestParam String assetName) {
+        TwelveDataDTO dto = ingestService.ingestTwelveData(assetName);
+        if (dto == null) return ResponseEntity.notFound().build();
+        else return ResponseEntity.ok(dto);
     }
 }

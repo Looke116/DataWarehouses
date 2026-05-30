@@ -11,6 +11,7 @@ public class AlphaVantageResponseDTO {
     @JsonProperty("Meta Data")
     private MetaData metaData;
 
-    @JsonProperty("Time Series (Daily)")
+//    @JsonProperty("Time Series (Daily)")
+    @JsonProperty("Weekly Time Series")
     private Map<String, DailyPrice> timeSeries;
 }

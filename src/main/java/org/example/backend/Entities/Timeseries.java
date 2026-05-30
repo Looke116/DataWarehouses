@@ -1,6 +1,7 @@
 package org.example.backend.Entities;
 
 import lombok.Data;
+import org.springframework.data.annotation.Id;
 
 import java.time.LocalDate;
 import java.util.Date;
@@ -9,13 +10,16 @@ import java.util.Map;
 @Data
 public class Timeseries {
 
-    public String assetId;
-    public String sourceId;
-    public LocalDate businessDate;
-    public LocalDate systemDate;
-    public Map<String, Integer> valuesInt;
-    public Map<String, Double> valuesDouble;
-    public Map<String, String> valuesText;
+    @Id
+    private String id;
+    private String assetId;
+    private String sourceId;
+    private LocalDate businessDate;
+    private LocalDate systemDate;
+    private Map<String, Integer> valuesInt;
+    private Map<String, Double> valuesDouble;
+    private Map<String, String> valuesText;
+    private boolean deleted;
 
     public Timeseries(String assetId, String sourceId, LocalDate businessDate, Map<String, Integer> valuesInt, Map<String, Double> valuesDouble) {
         this.assetId = assetId;
@@ -24,5 +28,6 @@ public class Timeseries {
         this.systemDate = LocalDate.now();
         this.valuesInt = valuesInt;
         this.valuesDouble = valuesDouble;
+        deleted = false;
     }
 }
