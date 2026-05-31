@@ -2,12 +2,16 @@ package org.example.backend.Entities;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.Map;
 
 @Data
+@CompoundIndex(
+        name = "asset_businessDate_idx",
+        def = "{'assetId':1,'businessDate':1}"
+)
 public class Timeseries {
 
     @Id

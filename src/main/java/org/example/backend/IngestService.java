@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.example.backend.DTOs.AlphaVantage.AlphaVantageResponseDTO;
 import org.example.backend.DTOs.TimeseriesDTO;
+import org.example.backend.DTOs.TrendAnalysisDto;
 import org.example.backend.DTOs.TwelveData.TwelveDataDTO;
 import org.example.backend.DTOs.TwelveData.ValueDTO;
 import org.example.backend.Entities.Asset;

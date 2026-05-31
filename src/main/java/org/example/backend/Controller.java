@@ -1,7 +1,10 @@
 package org.example.backend;
 
+import com.mongodb.lang.Nullable;
+import io.swagger.v3.oas.annotations.Operation;
 import org.example.backend.DTOs.AlphaVantage.AlphaVantageResponseDTO;
 import org.example.backend.DTOs.TimeseriesDTO;
+import org.example.backend.DTOs.TrendAnalysisDto;
 import org.example.backend.DTOs.TwelveData.TwelveDataDTO;
 import org.example.backend.Entities.Asset;
 import org.example.backend.Entities.Provider;
@@ -9,18 +12,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/")
 @CrossOrigin("*")
 public class Controller {
     private final IngestService ingestService;
+    private final AnalyticsService analyticsService;
 
     @Autowired
-    public Controller(IngestService ingestService) {
+    public Controller(IngestService ingestService, AnalyticsService analyticsService) {
         this.ingestService = ingestService;
+        this.analyticsService = analyticsService;
     }
 
     @GetMapping("/assets")
@@ -66,5 +71,11 @@ public class Controller {
         TwelveDataDTO dto = ingestService.ingestTwelveData(assetName);
         if (dto == null) return ResponseEntity.notFound().build();
         else return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/analyze")
+    @Operation(summary = "Date variables are optional and should be of format YYYY-MM-DD")
+    public ResponseEntity<TrendAnalysisDto> analyzeAsset(@RequestParam String assetId, @RequestParam @Nullable LocalDate startDate, @RequestParam @Nullable LocalDate endDate) {
+        return ResponseEntity.ok(analyticsService.analyzeAsset(assetId, startDate, endDate));
     }
 }

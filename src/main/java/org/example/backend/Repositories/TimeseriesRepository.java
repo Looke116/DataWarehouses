@@ -1,6 +1,7 @@
 package org.example.backend.Repositories;
 
 import org.example.backend.Entities.Timeseries;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.time.LocalDate;
@@ -16,4 +17,8 @@ public interface TimeseriesRepository extends MongoRepository<Timeseries, String
     Optional<Timeseries> findByAssetIdAndSourceIdAndBusinessDateAndDeleted(String id, String id1, LocalDate date, boolean deleted);
 
     List<Timeseries> findByAssetIdAndDeletedOrderByBusinessDateAsc(String assetId, boolean deleted);
+
+    List<Timeseries> findByAssetIdAndDeletedAndBusinessDateBetweenOrderByBusinessDateAsc(String assetId, boolean deleted, LocalDate start, LocalDate end);
+
+
 }
