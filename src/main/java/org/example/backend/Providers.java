@@ -2,7 +2,7 @@ package org.example.backend;
 
 public enum Providers {
     AlphaVantage,
-    Finnhub,
+//    Finnhub,
     TwelveData,
-    CoinGecko
+//    CoinGecko
 }

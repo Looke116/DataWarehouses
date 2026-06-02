@@ -1,16 +1,16 @@
-package org.example.backend;
+package org.example.backend.Services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.example.backend.DTOs.AlphaVantage.AlphaVantageResponseDTO;
 import org.example.backend.DTOs.TimeseriesDTO;
-import org.example.backend.DTOs.TrendAnalysisDto;
 import org.example.backend.DTOs.TwelveData.TwelveDataDTO;
 import org.example.backend.DTOs.TwelveData.ValueDTO;
 import org.example.backend.Entities.Asset;
 import org.example.backend.Entities.Provider;
 import org.example.backend.Entities.Timeseries;
+import org.example.backend.Providers;
 import org.example.backend.Repositories.AssetRepository;
 import org.example.backend.Repositories.ProviderRepository;
 import org.example.backend.Repositories.TimeseriesRepository;
@@ -32,13 +32,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class IngestService {
+public class CommonService {
     private final ProviderRepository providerRepository;
     private final AssetRepository assetRepository;
     private final TimeseriesRepository timeseriesRepository;
 
     @Autowired
-    public IngestService(ProviderRepository providerRepository,
+    public CommonService(ProviderRepository providerRepository,
                          AssetRepository assetRepository,
                          TimeseriesRepository timeseriesRepository) {
         this.providerRepository = providerRepository;
@@ -46,28 +46,50 @@ public class IngestService {
         this.timeseriesRepository = timeseriesRepository;
     }
 
-    public List<Asset> getAllAssets() {
-        List<Asset> assets = assetRepository.findAll();
-        return assets.stream().filter(x -> !x.isDeleted()).collect(Collectors.toList());
+    public Map<String, String> getAllAssets() {
+        List<Asset> allAssets = assetRepository.findAll();
+
+        Set<String> symbols = allAssets.stream().map(Asset::getSymbol).collect(Collectors.toSet());
+
+        Map<String, String> assets = new HashMap<>();
+        for (String symbol : symbols) {
+            Asset asset =assetRepository.findFirstBySymbolOrderByVersionDesc(symbol).get();
+            assets.put(asset.getId(), asset.getSymbol());
+        }
+        return assets;
     }
 
-    public Optional<Asset> searchForAsset(String symbol) {
-        return assetRepository.findBySymbolAndDeleted(symbol, false);
+    public Optional<Asset> searchForAsset(String id) {
+        return assetRepository.findFirstByIdOrderByVersionDesc(id);
     }
 
-    public List<Provider> getAllProviders() {
-        return providerRepository.findAll();
+    public Map<String, String> getAllProviders() {
+        Map<String, String> providers = new HashMap<>();
+        List<Provider> allProviders = providerRepository.findAll();
+        for (Provider provider : allProviders) {
+            providers.put(provider.getId(), provider.getName());
+        }
+        return providers;
     }
 
     public Optional<Provider> searchForProvider(String name) {
-        return providerRepository.findByName(name);
+        return providerRepository.getProviderById(name);
     }
 
-    public @Nullable List<TimeseriesDTO> getTimeseries(String assetId) {
+    public @Nullable List<TimeseriesDTO> getTimeseries(String assetId, LocalDate start, LocalDate end) {
+        if (start == null) start = LocalDate.now();
+        if (end == null) end = LocalDate.EPOCH;
+
+        if (start.isAfter(end)) {
+            LocalDate temp = start;
+            start = end;
+            end = temp;
+        }
+
         Optional<Asset> assetOptional = assetRepository.findById(assetId);
         if (assetOptional.isPresent()) {
             Asset asset = assetOptional.get();
-            List<Timeseries> timeseries = timeseriesRepository.findAllByAssetIdAndDeleted(asset.getId(),false);
+            List<Timeseries> timeseries = timeseriesRepository.findAllByAssetIdAndDeletedAndBusinessDateBetween(asset.getId(), false, start, end);
             return timeseries.stream().map(x ->
                     new TimeseriesDTO(x.getBusinessDate(), x.getValuesInt(), x.getValuesDouble(), x.getValuesText())).toList();
         } else return null;
@@ -103,7 +125,7 @@ public class IngestService {
             AlphaVantageResponseDTO dto = mapper.readValue(response.body(), AlphaVantageResponseDTO.class);
 
             Provider provider = providerRepository.getProviderByName(Providers.AlphaVantage.name());
-            Asset asset = createOrUpdateAsset(assetSymbol, provider);
+            Asset asset = createOrUpdateAsset(assetSymbol, provider, null, dto.getMetaData().getTimeZone());
 
             for (String dateString : dto.getTimeSeries().keySet()) {
                 LocalDate date = LocalDate.parse(dateString);
@@ -157,7 +179,7 @@ public class IngestService {
             TwelveDataDTO dto = mapper.readValue(response.body(), TwelveDataDTO.class);
 
             Provider provider = providerRepository.getProviderByName(Providers.TwelveData.name());
-            Asset asset = createOrUpdateAsset(assetSymbol, provider);
+            Asset asset = createOrUpdateAsset(assetSymbol, provider, dto.getMeta().getType(), dto.getMeta().getExchangeTimezone());
 
             for (ValueDTO value : dto.getValues()) {
                 LocalDate date = value.getDatetime();
@@ -181,22 +203,19 @@ public class IngestService {
         }
     }
 
-    private Asset createOrUpdateAsset(String assetSymbol, Provider provider) {
+    private Asset createOrUpdateAsset(String assetSymbol, Provider provider, String type, String timezone) {
         if (!assetRepository.existsBySymbol(assetSymbol)) {
             Map<String, String> map = new HashMap<>();
             map.put(provider.getName(), String.valueOf(provider.getAttributes()));
 
-            return assetRepository.save(new Asset(assetSymbol, "", map));
+            return assetRepository.save(new Asset(assetSymbol, type, timezone, map));
         } else {
-            Asset asset = assetRepository.findBySymbolAndDeleted(assetSymbol, false).get();
+            Asset asset = assetRepository.findFirstBySymbolOrderByVersionDesc(assetSymbol).get();
 
             if (asset.getAttributes().get(provider.getName()) == null) {
-                asset.setDeleted(true);
-                assetRepository.save(asset);
-
                 Map<String, String> map = asset.getAttributes();
                 map.put(provider.getName(), String.valueOf(provider.getAttributes()));
-                asset = new Asset(asset.getSymbol(), asset.getDescription(), map);
+                asset = new Asset(asset.getSymbol(), asset.getType(), asset.getTimezone(), map, asset.getVersion() + 1);
                 assetRepository.save(asset);
             }
             return asset;

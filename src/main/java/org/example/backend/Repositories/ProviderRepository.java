@@ -10,5 +10,6 @@ public interface ProviderRepository extends MongoRepository<Provider, String> {
 
     Provider getProviderByName(String provider);
 
+    Optional<Provider> getProviderById(String id);
     Optional<Provider> findByName(String name);
 }

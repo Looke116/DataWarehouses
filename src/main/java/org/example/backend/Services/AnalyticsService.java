@@ -1,4 +1,4 @@
-package org.example.backend;
+package org.example.backend.Services;
 
 import org.example.backend.DTOs.TrendAnalysisDto;
 import org.example.backend.Entities.Timeseries;
@@ -9,7 +9,6 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
 
