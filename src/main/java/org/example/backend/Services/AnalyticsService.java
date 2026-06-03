@@ -4,30 +4,19 @@ import org.example.backend.DTOs.TrendAnalysisDto;
 import org.example.backend.Entities.Timeseries;
 import org.example.backend.Repositories.TimeseriesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
 
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.group;
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.match;
-
 @Service
 public class AnalyticsService {
 
-    //    private final ProviderRepository providerRepository;
-//    private final AssetRepository assetRepository;
     private final TimeseriesRepository timeseriesRepository;
 
     @Autowired
-    public AnalyticsService(//ProviderRepository providerRepository,
-//                         AssetRepository assetRepository,
-                            TimeseriesRepository timeseriesRepository) {
-//        this.providerRepository = providerRepository;
-//        this.assetRepository = assetRepository;
+    public AnalyticsService(TimeseriesRepository timeseriesRepository) {
         this.timeseriesRepository = timeseriesRepository;
     }
 
@@ -42,15 +31,7 @@ public class AnalyticsService {
             end = temp;
         }
 
-        Aggregation aggregation =
-                Aggregation.newAggregation(
-                        match(Criteria.where("assetId").is(assetId)),
-                        group("assetId")
-                                .avg("close").as("avgClose")
-                                .max("close").as("maxClose")
-                                .min("close").as("minClose")
-                );
-        List<Timeseries> points = timeseriesRepository.findByAssetIdAndDeletedAndBusinessDateBetweenOrderByBusinessDateAsc(assetId, false, start, end);
+        List<Timeseries> points = timeseriesRepository.findAllByAssetIdAndBusinessDateBetweenOrderByVersionDesc(assetId, start, end);
 
         DoubleSummaryStatistics stats = points.stream().mapToDouble(x -> x.getValuesDouble().get("Close")).summaryStatistics();
 
@@ -60,8 +41,14 @@ public class AnalyticsService {
 
         double percentChange = ((last - first) / first) * 100;
 
-        TrendAnalysisDto trend = TrendAnalysisDto.builder().assetId(assetId).averagePrice(stats.getAverage()).minPrice(stats.getMin()).maxPrice(stats.getMax()).percentChange(percentChange).trend(percentChange > 0 ? "UPWARD" : "DOWNWARD").build();
+        TrendAnalysisDto trend = new TrendAnalysisDto();
 
+        trend.setAssetId(assetId);
+        trend.setAveragePrice(stats.getAverage());
+        trend.setMinPrice(stats.getMin());
+        trend.setMaxPrice(stats.getMax());
+        trend.setPercentChange(percentChange);
+        trend.setTrend(percentChange > 0 ? "UPWARD" : "DOWNWARD");
         trend.setVolatility(calculateVolatility(points));
         trend.setRisk(classifyRisk(trend.getVolatility()));
         trend.setForecast(naiveForecast(points));

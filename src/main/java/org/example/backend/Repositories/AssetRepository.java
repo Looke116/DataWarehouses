@@ -10,5 +10,6 @@ public interface AssetRepository extends MongoRepository<Asset, String> {
     boolean existsBySymbol(String symbol);
 
     Optional<Asset> findFirstBySymbolOrderByVersionDesc(String symbol);
+
     Optional<Asset> findFirstByIdOrderByVersionDesc(String symbol);
 }

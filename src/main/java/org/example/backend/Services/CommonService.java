@@ -89,7 +89,7 @@ public class CommonService {
         Optional<Asset> assetOptional = assetRepository.findById(assetId);
         if (assetOptional.isPresent()) {
             Asset asset = assetOptional.get();
-            List<Timeseries> timeseries = timeseriesRepository.findAllByAssetIdAndDeletedAndBusinessDateBetween(asset.getId(), false, start, end);
+            List<Timeseries> timeseries = timeseriesRepository.findAllByAssetIdAndBusinessDateBetweenOrderByVersionDesc(asset.getId(), start, end);
             return timeseries.stream().map(x ->
                     new TimeseriesDTO(x.getBusinessDate(), x.getValuesInt(), x.getValuesDouble(), x.getValuesText())).toList();
         } else return null;
@@ -224,7 +224,7 @@ public class CommonService {
     }
 
     private void createOrUpdateTimeseries(Provider provider, Asset asset, LocalDate date, Map<String, Integer> mapInteger, Map<String, Double> mapDouble) {
-        Optional<Timeseries> timeseriesOptional = timeseriesRepository.findByAssetIdAndSourceIdAndBusinessDateAndDeleted(asset.getId(), provider.getId(), date, false);
+        Optional<Timeseries> timeseriesOptional = timeseriesRepository.findByAssetIdAndSourceIdAndBusinessDateOrderByVersionDesc(asset.getId(), provider.getId(), date);
         if (timeseriesOptional.isEmpty()) {
             timeseriesRepository.save(new Timeseries(asset.getId(), provider.getId(), date, mapInteger, mapDouble));
         } else {
@@ -234,9 +234,7 @@ public class CommonService {
             if (!old.getValuesDouble().equals(mapDouble)) update = true;
 
             if (update) {
-                old.setDeleted(true);
-                timeseriesRepository.save(old);
-                timeseriesRepository.save(new Timeseries(asset.getId(), provider.getId(), date, mapInteger, mapDouble));
+                timeseriesRepository.save(new Timeseries(asset.getId(), provider.getId(), date, mapInteger, mapDouble, old.getVersion() + 1));
             }
         }
     }

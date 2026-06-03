@@ -9,17 +9,8 @@ import java.util.Optional;
 
 public interface TimeseriesRepository extends MongoRepository<Timeseries, String> {
 
-    boolean existsByAssetIdAndSourceIdAndBusinessDate(String assetId, String sourceId, LocalDate businessDate);
+    List<Timeseries> findAllByAssetIdAndBusinessDateBetweenOrderByVersionDesc(String assetId, LocalDate start, LocalDate end);
 
-    List<Timeseries> findAllByAssetIdAndDeleted(String assetId, boolean deleted);
-
-    List<Timeseries> findAllByAssetIdAndDeletedAndBusinessDateBetween(String assetId, boolean deleted, LocalDate start, LocalDate end);
-
-    Optional<Timeseries> findByAssetIdAndSourceIdAndBusinessDateAndDeleted(String id, String id1, LocalDate date, boolean deleted);
-
-    List<Timeseries> findByAssetIdAndDeletedOrderByBusinessDateAsc(String assetId, boolean deleted);
-
-    List<Timeseries> findByAssetIdAndDeletedAndBusinessDateBetweenOrderByBusinessDateAsc(String assetId, boolean deleted, LocalDate start, LocalDate end);
-
+    Optional<Timeseries> findByAssetIdAndSourceIdAndBusinessDateOrderByVersionDesc(String id, String id1, LocalDate date);
 
 }

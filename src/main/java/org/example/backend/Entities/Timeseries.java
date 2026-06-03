@@ -23,7 +23,7 @@ public class Timeseries {
     private Map<String, Integer> valuesInt;
     private Map<String, Double> valuesDouble;
     private Map<String, String> valuesText;
-    private boolean deleted;
+    private int version;
 
     public Timeseries(String assetId, String sourceId, LocalDate businessDate, Map<String, Integer> valuesInt, Map<String, Double> valuesDouble) {
         this.assetId = assetId;
@@ -32,6 +32,16 @@ public class Timeseries {
         this.systemDate = LocalDate.now();
         this.valuesInt = valuesInt;
         this.valuesDouble = valuesDouble;
-        deleted = false;
+        version = 0;
+    }
+
+    public Timeseries(String assetId, String sourceId, LocalDate businessDate, Map<String, Integer> valuesInt, Map<String, Double> valuesDouble, int version) {
+        this.assetId = assetId;
+        this.sourceId = sourceId;
+        this.businessDate = businessDate;
+        this.systemDate = LocalDate.now();
+        this.valuesInt = valuesInt;
+        this.valuesDouble = valuesDouble;
+        this.version = version;
     }
 }
