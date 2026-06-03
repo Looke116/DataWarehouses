@@ -7,6 +7,7 @@ import org.example.backend.DTOs.TrendAnalysisDto;
 import org.example.backend.Entities.Asset;
 import org.example.backend.Entities.Provider;
 import org.example.backend.Services.AnalyticsService;
+import org.example.backend.Services.ChatService;
 import org.example.backend.Services.CommonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,11 +24,13 @@ import java.util.Optional;
 public class Controller {
     private final CommonService commonService;
     private final AnalyticsService analyticsService;
+    private final ChatService chatService;
 
     @Autowired
-    public Controller(CommonService commonService, AnalyticsService analyticsService) {
+    public Controller(CommonService commonService, AnalyticsService analyticsService, ChatService chatService) {
         this.commonService = commonService;
         this.analyticsService = analyticsService;
+        this.chatService = chatService;
     }
 
     @GetMapping("/assets")
@@ -76,5 +79,10 @@ public class Controller {
     @Operation(summary = "The date variables are optional and should be of format YYYY-MM-DD")
     public ResponseEntity<TrendAnalysisDto> analyzeAsset(@RequestParam String assetId, @RequestParam @Nullable LocalDate startDate, @RequestParam @Nullable LocalDate endDate) {
         return ResponseEntity.ok(analyticsService.analyzeAsset(assetId, startDate, endDate));
+    }
+
+    @PostMapping("/chat")
+    public ResponseEntity<String> askAssistant(@RequestParam String message) {
+        return ResponseEntity.ok(chatService.chat(message));
     }
 }

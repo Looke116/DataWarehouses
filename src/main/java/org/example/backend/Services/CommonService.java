@@ -72,8 +72,8 @@ public class CommonService {
         return providers;
     }
 
-    public Optional<Provider> searchForProvider(String name) {
-        return providerRepository.getProviderById(name);
+    public Optional<Provider> searchForProvider(String id) {
+        return providerRepository.getProviderById(id);
     }
 
     public @Nullable List<TimeseriesDTO> getTimeseries(String assetId, LocalDate start, LocalDate end) {
