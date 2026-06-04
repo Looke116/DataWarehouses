@@ -1,29 +1,30 @@
 package org.example.backend.Services;
 
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.expressions.Window;
+import org.apache.spark.sql.expressions.WindowSpec;
+import org.apache.spark.sql.functions;
 import org.example.backend.DTOs.TrendAnalysisDto;
-import org.example.backend.Entities.Timeseries;
-import org.example.backend.Repositories.TimeseriesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.DoubleSummaryStatistics;
-import java.util.List;
 
 @Service
 public class AnalyticsService {
 
-    private final TimeseriesRepository timeseriesRepository;
+    private final SparkSession spark;
 
     @Autowired
-    public AnalyticsService(TimeseriesRepository timeseriesRepository) {
-        this.timeseriesRepository = timeseriesRepository;
+    public AnalyticsService(SparkSession sparkSession) {
+        this.spark = sparkSession;
     }
 
     public TrendAnalysisDto analyzeAsset(String assetId, LocalDate start, LocalDate end) {
-
-        if (start == null) start = LocalDate.now();
-        if (end == null) end = LocalDate.EPOCH;
+        if (start == null) start = LocalDate.EPOCH;
+        if (end == null) end = LocalDate.now();
 
         if (start.isAfter(end)) {
             LocalDate temp = start;
@@ -31,73 +32,88 @@ public class AnalyticsService {
             end = temp;
         }
 
-        List<Timeseries> points = timeseriesRepository.findByAssetIdAndBusinessDateBetweenOrderByVersionDesc(assetId, start, end);
+        Dataset<Row> df = spark.read()
+                .format("mongodb")
+                .option("database", "test")
+                .option("collection", "collection")
+                .load();
 
-        DoubleSummaryStatistics stats = points.stream().mapToDouble(x -> x.getValuesDouble().get("Close")).summaryStatistics();
+        WindowSpec versionWindow = Window.partitionBy("businessDate")
+                .orderBy(functions.col("version").desc());
+        Dataset<Row> filteredDf = df
+                .filter(
+                        df.col("assetId").equalTo(assetId)
+                                .and(df.col("businessDate").geq(start.toString()))
+                                .and(df.col("businessDate").leq(end.toString()))
+                )
+                .withColumn("row_num", functions.row_number().over(versionWindow))
+                .filter(functions.col("row_num").equalTo(1))
+                .sort(df.col("businessDate").asc())
+                .drop("row_num");
 
-        double first = points.getFirst().getValuesDouble().get("Close");
+        long count = filteredDf.count();
+        if (count < 2) {
+            throw new IllegalArgumentException("Insufficient historical data points found for analytics.");
+        }
 
-        double last = points.getLast().getValuesDouble().get("Close");
+        Row stats = filteredDf.select(
+                functions.min("valuesDouble.Close").alias("minPrice"),
+                functions.max("valuesDouble.Close").alias("maxPrice"),
+                functions.avg("valuesDouble.Close").alias("avgPrice"),
+                functions.stddev_samp("valuesDouble.Close").alias("volatility")
+        ).first();
 
-        double percentChange = ((last - first) / first) * 100;
+        double minPrice = stats.isNullAt(0) ? 0.0 : stats.getDouble(0);
+        double maxPrice = stats.isNullAt(1) ? 0.0 : stats.getDouble(1);
+        double avgPrice = stats.isNullAt(2) ? 0.0 : stats.getDouble(2);
+        double volatility = stats.isNullAt(3) ? 0.0 : stats.getDouble(3);
+
+        Row firstRow = filteredDf.first();
+        Row[] tailArray = (Row[]) filteredDf.tail(1);
+        Row lastRow = tailArray[0];
+
+        double startPrice = firstRow.getStruct(firstRow.fieldIndex("valuesDouble")).getAs("Close");
+        double endPrice = lastRow.getStruct(lastRow.fieldIndex("valuesDouble")).getAs("Close");
+        double percentChange = ((endPrice - startPrice) / startPrice) * 100.0;
 
         TrendAnalysisDto trend = new TrendAnalysisDto();
-
         trend.setAssetId(assetId);
-        trend.setAveragePrice(stats.getAverage());
-        trend.setMinPrice(stats.getMin());
-        trend.setMaxPrice(stats.getMax());
+        trend.setMinPrice(minPrice);
+        trend.setMaxPrice(maxPrice);
+        trend.setAveragePrice(avgPrice);
+        trend.setVolatility(volatility);
         trend.setPercentChange(percentChange);
-        trend.setTrend(percentChange > 0 ? "UPWARD" : "DOWNWARD");
-        trend.setVolatility(calculateVolatility(points));
-        trend.setRisk(classifyRisk(trend.getVolatility()));
-        trend.setForecast(naiveForecast(points));
-        trend.setStartDate(points.getFirst().getBusinessDate());
-        trend.setEndDate(points.getLast().getBusinessDate());
-        trend.setDataPoints(points.size());
-        trend.setCurrentPrice(points.getLast().getValuesDouble().get("Close"));
-        trend.setTrendStrength(trendStrength(trend.getPercentChange()));
+        trend.setStartDate(LocalDate.parse(firstRow.getAs("businessDate")));
+        trend.setEndDate(LocalDate.parse(lastRow.getAs("businessDate")));
+        trend.setDataPoints((int) count);
+        trend.setCurrentPrice(endPrice);
+        trend.setTrendStrength(determineTrendStrength(percentChange));
+        trend.setRiskClassification(classifyRisk(volatility));
+        trend.setForecastedPrice(naiveForecast(filteredDf, endPrice));
+
         return trend;
     }
 
-    public double calculateVolatility(List<Timeseries> points) {
-
-        double mean = points.stream().mapToDouble(x -> x.getValuesDouble().get("Close")).average().orElse(0);
-
-        double variance = points.stream().mapToDouble(x -> Math.pow(x.getValuesDouble().get("Close") - mean, 2)).average().orElse(0);
-
-        return Math.sqrt(variance);
-    }
-
-    public String classifyRisk(double volatility) {
-
-        if (volatility < 2) return "LOW";
-
-        if (volatility < 5) return "MEDIUM";
-
+    private String classifyRisk(double volatility) {
+        if (volatility < 2.0) return "LOW";
+        if (volatility < 5.0) return "MEDIUM";
         return "HIGH";
     }
 
-    public double naiveForecast(List<Timeseries> points) {
-
-        int size = points.size();
-
-        double last = points.get(size - 1).getValuesDouble().get("Close");
-
-        double previous = points.get(size - 2).getValuesDouble().get("Close");
-
-        double delta = last - previous;
-
-        return last + delta;
+    private String determineTrendStrength(double percentChange) {
+        if (percentChange > 5.0) return "STRONG_BULLISH";
+        if (percentChange > 1.0) return "BULLISH";
+        if (percentChange < -5.0) return "STRONG_BEARISH";
+        if (percentChange < -1.0) return "BEARISH";
+        return "STABLE";
     }
 
-    public String trendStrength(double percentChange) {
-        if (Math.abs(percentChange) < 5)
-            return "WEAK";
+    private double naiveForecast(Dataset<Row> filteredDf, double currentPrice) {
+        Row[] lastTwoRows = (Row[]) filteredDf.tail(2);
+        if (lastTwoRows.length < 2) return currentPrice;
 
-        if (Math.abs(percentChange) < 20)
-            return "MODERATE";
-
-        return "STRONG";
+        double previousPrice = lastTwoRows[0].getStruct(lastTwoRows[0].fieldIndex("valuesDouble")).getAs("Close");
+        double delta = currentPrice - previousPrice;
+        return currentPrice + delta;
     }
 }

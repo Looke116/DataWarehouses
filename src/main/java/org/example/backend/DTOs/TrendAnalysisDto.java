@@ -27,13 +27,12 @@ public class TrendAnalysisDto {
 
     private double percentChange;
 
-    private String trend;
-
     private String trendStrength;
 
-    private String risk;
+    private double forecastedPrice;
 
-    private double forecast;
+    private String riskClassification;
+
 
     public TrendAnalysisDto() {}
 }
