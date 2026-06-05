@@ -89,7 +89,7 @@ public class CommonService {
         Optional<Asset> assetOptional = assetRepository.findById(assetId);
         if (assetOptional.isPresent()) {
             Asset asset = assetOptional.get();
-            List<Timeseries> timeseries = timeseriesRepository.findAllByAssetIdAndBusinessDateBetweenOrderByVersionDesc(asset.getId(), start, end);
+            List<Timeseries> timeseries = timeseriesRepository.findByAssetIdAndBusinessDateBetweenOrderByVersionDesc(asset.getId(), start, end);
             return timeseries.stream().map(x ->
                     new TimeseriesDTO(x.getBusinessDate(), x.getValuesInt(), x.getValuesDouble(), x.getValuesText())).toList();
         } else return null;
@@ -130,8 +130,8 @@ public class CommonService {
             for (String dateString : dto.getTimeSeries().keySet()) {
                 LocalDate date = LocalDate.parse(dateString);
 
-                Map<String, Integer> mapInteger = new HashMap<>();
-                mapInteger.put("Volume", Integer.valueOf(dto.getTimeSeries().get(dateString).getVolume()));
+                Map<String, Long> mapInteger = new HashMap<>();
+                mapInteger.put("Volume", Long.valueOf(dto.getTimeSeries().get(dateString).getVolume()));
 
                 Map<String, Double> mapDouble = new HashMap<>();
                 mapDouble.put("Open", Double.valueOf(dto.getTimeSeries().get(dateString).getOpen()));
@@ -184,7 +184,7 @@ public class CommonService {
             for (ValueDTO value : dto.getValues()) {
                 LocalDate date = value.getDatetime();
 
-                Map<String, Integer> mapInteger = new HashMap<>();
+                Map<String, Long> mapInteger = new HashMap<>();
                 mapInteger.put("Volume", value.getVolume());
 
                 Map<String, Double> mapDouble = new HashMap<>();
@@ -223,7 +223,7 @@ public class CommonService {
 
     }
 
-    private void createOrUpdateTimeseries(Provider provider, Asset asset, LocalDate date, Map<String, Integer> mapInteger, Map<String, Double> mapDouble) {
+    private void createOrUpdateTimeseries(Provider provider, Asset asset, LocalDate date, Map<String, Long> mapInteger, Map<String, Double> mapDouble) {
         Optional<Timeseries> timeseriesOptional = timeseriesRepository.findByAssetIdAndSourceIdAndBusinessDateOrderByVersionDesc(asset.getId(), provider.getId(), date);
         if (timeseriesOptional.isEmpty()) {
             timeseriesRepository.save(new Timeseries(asset.getId(), provider.getId(), date, mapInteger, mapDouble));

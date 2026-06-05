@@ -31,7 +31,7 @@ public class AnalyticsService {
             end = temp;
         }
 
-        List<Timeseries> points = timeseriesRepository.findAllByAssetIdAndBusinessDateBetweenOrderByVersionDesc(assetId, start, end);
+        List<Timeseries> points = timeseriesRepository.findByAssetIdAndBusinessDateBetweenOrderByVersionDesc(assetId, start, end);
 
         DoubleSummaryStatistics stats = points.stream().mapToDouble(x -> x.getValuesDouble().get("Close")).summaryStatistics();
 

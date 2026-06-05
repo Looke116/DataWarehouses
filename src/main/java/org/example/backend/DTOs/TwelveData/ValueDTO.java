@@ -17,5 +17,5 @@ public class ValueDTO {
 
     private double close;
 
-    private int volume;
+    private long volume;
 }

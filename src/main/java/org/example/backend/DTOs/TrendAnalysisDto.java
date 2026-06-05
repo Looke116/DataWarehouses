@@ -11,7 +11,7 @@ public class TrendAnalysisDto {
 
     private LocalDate endDate;
 
-    private int dataPoints;
+    private long dataPoints;
 
     private String assetId;
 

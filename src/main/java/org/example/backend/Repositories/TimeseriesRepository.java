@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface TimeseriesRepository extends MongoRepository<Timeseries, String> {
 
-    List<Timeseries> findAllByAssetIdAndBusinessDateBetweenOrderByVersionDesc(String assetId, LocalDate start, LocalDate end);
+    List<Timeseries> findByAssetIdAndBusinessDateBetweenOrderByVersionDesc(String assetId, LocalDate start, LocalDate end);
 
     Optional<Timeseries> findByAssetIdAndSourceIdAndBusinessDateOrderByVersionDesc(String id, String id1, LocalDate date);
 

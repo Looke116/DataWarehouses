@@ -20,12 +20,14 @@ public class Timeseries {
     private String sourceId;
     private LocalDate businessDate;
     private LocalDate systemDate;
-    private Map<String, Integer> valuesInt;
+    private Map<String, Long> valuesInt;
     private Map<String, Double> valuesDouble;
     private Map<String, String> valuesText;
     private int version;
 
-    public Timeseries(String assetId, String sourceId, LocalDate businessDate, Map<String, Integer> valuesInt, Map<String, Double> valuesDouble) {
+    public Timeseries() {}
+
+    public Timeseries(String assetId, String sourceId, LocalDate businessDate, Map<String, Long> valuesInt, Map<String, Double> valuesDouble) {
         this.assetId = assetId;
         this.sourceId = sourceId;
         this.businessDate = businessDate;
@@ -35,7 +37,7 @@ public class Timeseries {
         version = 0;
     }
 
-    public Timeseries(String assetId, String sourceId, LocalDate businessDate, Map<String, Integer> valuesInt, Map<String, Double> valuesDouble, int version) {
+    public Timeseries(String assetId, String sourceId, LocalDate businessDate, Map<String, Long> valuesInt, Map<String, Double> valuesDouble, int version) {
         this.assetId = assetId;
         this.sourceId = sourceId;
         this.businessDate = businessDate;
